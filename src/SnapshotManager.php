@@ -33,6 +33,10 @@ class SnapshotManager
             return $snapshotStore;
         }
 
+        if('default' === $driver){
+            $driver = $this->fromSnapshotConfig('snapshots.store.default');
+        }
+
         return $this->snapshotStore[$driver] = $this->resolveSnapshotStore($driver);
     }
 

@@ -35,7 +35,7 @@ final class StandaloneSnapshotReadModel implements ReadModel
     {
         $event = $events[0];
 
-        $this->aggregateCache->put($event->aggregateId, $event);
+        $this->aggregateCache->put($event->aggregateId(), $event);
     }
 
     public function persist(): void
