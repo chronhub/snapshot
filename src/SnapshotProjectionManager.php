@@ -99,8 +99,13 @@ class SnapshotProjectionManager
 
     protected function determineAggregateTypes(array $config, string $streamName): array
     {
-        // todo handle children
-        return [$config['aggregate_type']['root']];
+        $aggregateTypes = $config['aggregate_type'];
+
+        if (is_string($aggregateTypes)) {
+            return [$aggregateTypes];
+        }
+
+        return [$aggregateTypes['root']];
     }
 
     protected function fromChronicler(string $key, $default = null)
