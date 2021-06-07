@@ -23,7 +23,9 @@ use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRepositoryWithSnaps
 final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapshotting
 {
     use HasReconstituteAggregate;
-    use InteractWithAggregateRepository { retrieve as retrieveFromChronicler; }
+    use InteractWithAggregateRepository {
+        retrieve as retrieveFromChronicler;
+    }
 
     public function __construct(protected AggregateType $aggregateType,
                                 protected Chronicler $chronicler,
@@ -65,20 +67,20 @@ final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapsh
         try {
             $streamEvents = $this->fromHistory(
                 $aggregateId,
-                $this->retrieveAllEventsFromSnapshotLastVersion($aggregateId, $snapshot)
+                $this->retrieveEventsFromSnapshotLastVersion($aggregateId, $snapshot)
             );
 
             return $aggregateRoot->reconstituteFromSnapshotEvents($streamEvents);
         } catch (StreamNotFound) {
             // no more events have been found
             // we can safely return the aggregate
-            // only if we persist aggregate on every event
+            // only if we persist snapshot on every event
             return $aggregateRoot;
         }
     }
 
-    private function retrieveAllEventsFromSnapshotLastVersion(AggregateId $aggregateId,
-                                                              Snapshot $snapshot): QueryFilter
+    private function retrieveEventsFromSnapshotLastVersion(AggregateId $aggregateId,
+                                                           Snapshot $snapshot): QueryFilter
     {
         $queryScope = $this->snapshotStore->queryScope();
 
