@@ -58,7 +58,7 @@ final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapsh
             $aggregateId->toString()
         );
 
-        if ( ! $snapshot) {
+        if (null === $snapshot) {
             return null;
         }
 

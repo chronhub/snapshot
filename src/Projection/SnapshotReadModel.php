@@ -15,7 +15,7 @@ use Chronhub\Foundation\Support\Contracts\Aggregate\AggregateId;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRootWithSnapshotting;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRepositoryWithSnapshotting;
 
-final class StandaloneSnapshotReadModel implements ReadModel
+final class SnapshotReadModel implements ReadModel
 {
     private array $counter = [];
     private Collection $aggregateCache;

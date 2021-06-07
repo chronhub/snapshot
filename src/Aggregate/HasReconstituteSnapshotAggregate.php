@@ -8,7 +8,7 @@ use Generator;
 use Chronhub\Snapshot\Exception\RuntimeException;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRootWithSnapshotting;
 
-trait HasReconstituteSnapshottingAggregate
+trait HasReconstituteSnapshotAggregate
 {
     public function reconstituteFromSnapshotEvents(Generator $events): ?AggregateRootWithSnapshotting
     {

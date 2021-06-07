@@ -10,11 +10,11 @@ use Illuminate\Contracts\Foundation\Application;
 use Chronhub\Snapshot\Exception\RuntimeException;
 use Chronhub\Foundation\Aggregate\AggregateChanged;
 use Chronhub\Projector\Context\ContextualReadModel;
+use Chronhub\Snapshot\Projection\SnapshotReadModel;
 use Chronhub\Foundation\Support\Contracts\Clock\Clock;
 use Chronhub\Projector\Support\Contracts\ServiceManager;
 use Chronhub\Projector\Support\Contracts\ProjectorFactory;
 use Chronhub\Projector\Support\Contracts\Support\ReadModel;
-use Chronhub\Snapshot\Projection\StandaloneSnapshotReadModel;
 use Chronhub\Chronicler\Support\Contracts\Factory\RepositoryManager;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRepositoryWithSnapshotting;
 use function is_string;
@@ -89,7 +89,7 @@ class SnapshotProjectionManager
             throw new RuntimeException("Aggregate repository for $streamName must implement contract " . AggregateRepositoryWithSnapshotting::class);
         }
 
-        return new StandaloneSnapshotReadModel(
+        return new SnapshotReadModel(
             $repository,
             $this->app->get($snapshotServiceId),
             $this->app->get(Clock::class),
