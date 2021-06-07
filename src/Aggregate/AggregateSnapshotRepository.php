@@ -12,18 +12,18 @@ use Chronhub\Chronicler\Aggregate\AggregateEventReleaser;
 use Chronhub\Chronicler\Support\Contracts\StreamProducer;
 use Chronhub\Chronicler\Aggregate\HasReconstituteAggregate;
 use Chronhub\Chronicler\Support\Contracts\Query\QueryFilter;
-use Chronhub\Chronicler\Support\Contracts\ReadOnlyChronicler;
 use Chronhub\Foundation\Support\Contracts\Aggregate\AggregateId;
+use Chronhub\Chronicler\Aggregate\InteractWithAggregateRepository;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateType;
 use Chronhub\Foundation\Support\Contracts\Aggregate\AggregateRoot;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateCache;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRootWithSnapshotting;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRepositoryWithSnapshotting;
-use function reset;
 
 final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapshotting
 {
     use HasReconstituteAggregate;
+    use InteractWithAggregateRepository { retrieve as retrieveFromChronicler; }
 
     public function __construct(protected AggregateType $aggregateType,
                                 protected Chronicler $chronicler,
@@ -46,42 +46,7 @@ final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapsh
             return $aggregateRoot;
         }
 
-        $aggregateRoot = $this->reconstituteAggregateRoot($aggregateId);
-
-        if ($aggregateRoot) {
-            $this->aggregateCache->put($aggregateRoot);
-        }
-
-        return $aggregateRoot;
-    }
-
-    public function persist(AggregateRoot $aggregateRoot): void
-    {
-        $this->aggregateType->assertAggregateRootIsSupported($aggregateRoot::class);
-
-        $events = $this->eventsReleaser->releaseEvents($aggregateRoot);
-
-        if ( ! $firstEvent = reset($events)) {
-            return;
-        }
-
-        $stream = $this->streamProducer->produceStream($aggregateRoot->aggregateId(), $events);
-
-        $this->streamProducer->isFirstCommit($firstEvent)
-            ? $this->chronicler->persistFirstCommit($stream)
-            : $this->chronicler->persist($stream);
-
-        $this->aggregateCache->forget($aggregateRoot->aggregateId());
-    }
-
-    public function chronicler(): ReadOnlyChronicler
-    {
-        return $this->chronicler;
-    }
-
-    public function flushCache(): void
-    {
-        $this->aggregateCache->flush();
+        return $this->retrieveFromChronicler($aggregateId);
     }
 
     public function retrieveFromSnapshotStore(AggregateId $aggregateId): ?AggregateRootWithSnapshotting

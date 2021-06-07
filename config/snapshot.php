@@ -12,11 +12,9 @@ return [
                 'mapping_tables' => [],
                 'serializer' => \Chronhub\Snapshot\Serializer\PgsqlSnapshotSerializer::class,
                 'query_scope' => \Chronhub\Projector\Support\Scope\PgsqlProjectionQueryScope::class,
-                //'disabled_transaction' => false,
             ],
 
             'in_memory' => [
-                //'disabled_transaction' => false, // checkMe
                 'query_scope' => \Chronhub\Projector\Support\Scope\InMemoryProjectionQueryScope::class,
             ],
         ],
