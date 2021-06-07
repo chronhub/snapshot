@@ -92,7 +92,7 @@ final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapsh
 
         return $this->snapshotStore->queryScope()->matchAggregateGreaterThanVersion(
             $aggregateId->toString(),
-            $this->aggregateType->aggregateRootClassName(),
+            $snapshot->aggregateType(),
             $snapshot->lastVersion()
         );
     }
