@@ -1,0 +1,7 @@
+/vendor
+build
+composer.lock
+TODO.md
+.phpunit.result.cache
+.php_cs.cache
+.idea

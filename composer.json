@@ -1,0 +1,55 @@
+{
+    "name": "chronhub/snapshot",
+    "description": "snapshot event sourcing",
+    "keywords": [],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "steph bug",
+            "email": "chronhubgit@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "chronhub/foundation": "dev-main",
+        "chronhub/chronicler": "dev-main",
+        "chronhub/projector": "dev-main",
+        "ext-pdo": "*",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^2.18.4",
+        "jetbrains/phpstorm-attributes": "9999999-dev",
+        "laravel/framework": "8.x",
+        "marc-mabe/php-enum": "^4.4",
+        "nunomaduro/larastan": "0.6.x-dev",
+        "orchestra/testbench": "6.x",
+        "phpspec/prophecy-phpunit": "dev-master",
+        "phpstan/phpstan": "0.12.x-dev",
+        "phpunit/phpunit": "^9.4",
+        "roave/security-advisories": "dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "Chronhub\\Snapshot\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Chronhub\\Snapshot\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "dont-discover": []
+        }
+    },
+    "minimum-stability": "dev"
+}
