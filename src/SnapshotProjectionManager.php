@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Chronhub\Snapshot;
 
+use Chronhub\Chronicler\Stream\StreamName;
 use Illuminate\Support\Arr;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
@@ -92,6 +93,7 @@ class SnapshotProjectionManager
         return new SnapshotReadModel(
             $repository,
             $this->app->get($snapshotServiceId),
+            new StreamName($streamName),
             $this->app->get(Clock::class),
             $aggregateTypes,
             $config['persist_every_x_events'] ?? 1000
