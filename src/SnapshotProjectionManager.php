@@ -38,7 +38,7 @@ class SnapshotProjectionManager
 
         $streamName = $streamConfig['stream_name'] ?? $streamName;
 
-        $aggregateTypes = $this->determineAggregateTypes($streamConfig, $streamName);
+        $aggregateTypes = $this->determineAggregateTypes($streamConfig);
 
         $snapshotConfig = $streamConfig['snapshot'] ?? [];
 
@@ -93,11 +93,12 @@ class SnapshotProjectionManager
             $repository,
             $this->app->get($snapshotServiceId),
             $this->app->get(Clock::class),
-            $aggregateTypes
+            $aggregateTypes,
+            $config['persist_every_x_events'] ?? 1000
         );
     }
 
-    protected function determineAggregateTypes(array $config, string $streamName): array
+    protected function determineAggregateTypes(array $config): array
     {
         $aggregateTypes = $config['aggregate_type'];
 

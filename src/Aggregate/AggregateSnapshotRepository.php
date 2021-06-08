@@ -32,7 +32,8 @@ final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapsh
                                 protected StreamProducer $streamProducer,
                                 protected AggregateCache $aggregateCache,
                                 protected AggregateEventReleaser $eventsReleaser,
-                                protected SnapshotStore $snapshotStore)
+                                protected SnapshotStore $snapshotStore,
+                                protected bool $isPersistEveryEvent = false)
     {
     }
 
@@ -72,10 +73,7 @@ final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapsh
 
             return $aggregateRoot->reconstituteFromSnapshotEvents($streamEvents);
         } catch (StreamNotFound) {
-            // no more events have been found
-            // we can safely return the aggregate
-            // only if we persist snapshot on every event
-            return $aggregateRoot;
+            return $this->isPersistEveryEvent ? $aggregateRoot : null;
         }
     }
 
