@@ -28,7 +28,7 @@ final class ReconstituteAggregateForSnapshot
             $aggregateRoot = $snapshot->aggregateRoot();
 
             return $aggregateRoot->reconstituteFromSnapshotEvents(
-                $this->fromHistory($aggregateId, $snapshot->lastVersion() + 1, $toVersion)
+                $this->fromHistory($aggregateId, $snapshot->lastVersion() + 1, $toVersion + 1)
             );
         } catch (StreamNotFound) {
             return null;
