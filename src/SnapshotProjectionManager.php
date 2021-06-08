@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Chronhub\Snapshot;
 
-use Chronhub\Chronicler\Stream\StreamName;
 use Illuminate\Support\Arr;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
@@ -16,6 +15,7 @@ use Chronhub\Foundation\Support\Contracts\Clock\Clock;
 use Chronhub\Projector\Support\Contracts\ServiceManager;
 use Chronhub\Projector\Support\Contracts\ProjectorFactory;
 use Chronhub\Projector\Support\Contracts\Support\ReadModel;
+use Chronhub\Snapshot\Projection\ReconstituteAggregateForSnapshot;
 use Chronhub\Chronicler\Support\Contracts\Factory\RepositoryManager;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRepositoryWithSnapshotting;
 use function is_string;
@@ -90,10 +90,11 @@ class SnapshotProjectionManager
             throw new RuntimeException("Aggregate repository for $streamName must implement contract " . AggregateRepositoryWithSnapshotting::class);
         }
 
+        $reconstitute = new ReconstituteAggregateForSnapshot($repository);
+
         return new SnapshotReadModel(
-            $repository,
             $this->app->get($snapshotServiceId),
-            new StreamName($streamName),
+            $reconstitute,
             $this->app->get(Clock::class),
             $aggregateTypes,
             $config['persist_every_x_events'] ?? 1000

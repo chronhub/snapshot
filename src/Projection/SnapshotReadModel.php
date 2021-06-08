@@ -4,34 +4,31 @@ declare(strict_types=1);
 
 namespace Chronhub\Snapshot\Projection;
 
-use Chronhub\Chronicler\Exception\StreamNotFound;
-use Chronhub\Chronicler\Stream\StreamName;
-use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRepositoryWithSnapshotting;
-use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRootWithSnapshotting;
-use Chronhub\Chronicler\Support\Contracts\Query\QueryFilter;
+use Chronhub\Snapshot\Snapshot;
+use Illuminate\Support\Collection;
+use Chronhub\Snapshot\Store\SnapshotStore;
 use Chronhub\Foundation\Aggregate\AggregateChanged;
-use Chronhub\Foundation\Support\Contracts\Aggregate\AggregateId;
-use Chronhub\Foundation\Support\Contracts\Aggregate\AggregateRoot;
 use Chronhub\Foundation\Support\Contracts\Clock\Clock;
 use Chronhub\Foundation\Support\Contracts\Message\Header;
+use Chronhub\Snapshot\Exception\InvalidArgumentException;
 use Chronhub\Projector\Support\Contracts\Support\ReadModel;
-use Chronhub\Snapshot\Snapshot;
-use Chronhub\Snapshot\Store\SnapshotStore;
-use Generator;
-use Illuminate\Database\Query\Builder;
-use Illuminate\Support\Collection;
+use Chronhub\Foundation\Support\Contracts\Aggregate\AggregateId;
+use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRootWithSnapshotting;
 
 final class SnapshotReadModel implements ReadModel
 {
     private Collection $aggregateCache;
 
-    public function __construct(private AggregateRepositoryWithSnapshotting $aggregateRepository,
-                                private SnapshotStore $snapshotStore,
-                                private StreamName $streamName,
+    public function __construct(private SnapshotStore $snapshotStore,
+                                private ReconstituteAggregateForSnapshot $reconstitute,
                                 private Clock $clock,
                                 private array $aggregateTypes,
                                 private int $persisEveryEvents = 1000)
     {
+        if ($persisEveryEvents <= 1) {
+            throw new InvalidArgumentException('Persist every x events must be greater than one');
+        }
+
         $this->aggregateCache = new Collection();
     }
 
@@ -48,18 +45,12 @@ final class SnapshotReadModel implements ReadModel
     public function persist(): void
     {
         $this->aggregateCache->each(function (AggregateChanged $event): void {
-            $version = (int)$event->header(Header::AGGREGATE_VERSION);
+            $version = (int) $event->header(Header::AGGREGATE_VERSION);
 
             if (1 === $version || 0 === $version % $this->persisEveryEvents) {
                 $aggregateId = $this->determineAggregateId($event);
-                $from = $version === $this->persisEveryEvents ? 1 : $this->persisEveryEvents - $version;
 
-                $aggregateRoot = $this->reconstituteFromSnapshot(
-                    $aggregateId,
-                    $event->header(Header::AGGREGATE_TYPE),
-                    $from,
-                    $version
-                );
+                $aggregateRoot = $this->reconstituteAggregateRoot($event, $aggregateId, $version);
 
                 if ($aggregateRoot instanceof AggregateRootWithSnapshotting) {
                     $snapshot = new Snapshot(
@@ -72,8 +63,6 @@ final class SnapshotReadModel implements ReadModel
 
                     $this->snapshotStore->save($snapshot);
                 }
-
-                $this->aggregateRepository->flushCache();
             }
         });
 
@@ -103,6 +92,30 @@ final class SnapshotReadModel implements ReadModel
     {
     }
 
+    private function reconstituteAggregateRoot(AggregateChanged $event,
+                                               AggregateId $aggregateId,
+                                               int $version): ?AggregateRootWithSnapshotting
+    {
+        if (1 !== $version) {
+            $lastSnapshot = $this->snapshotStore->get(
+                $event->header(Header::AGGREGATE_TYPE),
+                $aggregateId->toString()
+            );
+
+            if (null === $lastSnapshot) {
+                return null;
+            }
+
+            return $this->reconstitute->reconstituteFromSnapshot($lastSnapshot, $aggregateId, $version);
+        }
+
+        return $this->reconstitute->reconstituteFromFirstVersion(
+                $aggregateId,
+                $event->header(Header::AGGREGATE_TYPE),
+                $event
+            );
+    }
+
     private function determineAggregateId(AggregateChanged $event): AggregateId
     {
         $aggregateId = $event->header(Header::AGGREGATE_ID);
@@ -115,49 +128,5 @@ final class SnapshotReadModel implements ReadModel
 
         /* @var AggregateId $aggregateIdType */
         return $aggregateIdType::fromString($aggregateId);
-    }
-
-    private function reconstituteFromSnapshot(AggregateId $aggregateId,
-                                              string $aggregateType,
-                                              int $from,
-                                              int $to): ?AggregateRoot
-    {
-        try{
-            $lastSnapshot = $this->snapshotStore->get($aggregateType, $aggregateId->toString());
-
-            if(null === $lastSnapshot){
-                return null;
-            }
-
-            $aggregateRoot = $lastSnapshot->aggregateRoot();
-
-            $aggregateRoot->reconstituteFromSnapshotEvents($this->fromHistory($aggregateId, $from, $to));
-
-            return $aggregateRoot;
-        }catch(StreamNotFound){
-            return null;
-        }
-    }
-
-    private function fromHistory(AggregateId $aggregateId, int $from, int $to): Generator
-    {
-        $filter = new class($aggregateId, $from, $to) implements QueryFilter {
-            public function __construct(private AggregateId $aggregateId, private int $from, private int $to)
-            {
-            }
-
-            public function filterQuery(): callable
-            {
-                return function (Builder $query): void {
-                    $query
-                        ->whereJsonContains('headers->__aggregate_id', $this->aggregateId->toString())
-                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) >= ' . $this->from)
-                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) <= ' . $this->to)
-                        ->orderByRaw('CAST(headers->>\'__aggregate_version\' AS INT) ASC');
-                };
-            }
-        };
-
-        return $this->aggregateRepository->chronicler()->retrieveFiltered($this->streamName, $filter);
     }
 }

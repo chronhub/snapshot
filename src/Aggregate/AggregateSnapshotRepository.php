@@ -73,7 +73,7 @@ final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapsh
 
             return $aggregateRoot->reconstituteFromSnapshotEvents($streamEvents);
         } catch (StreamNotFound) {
-            return $this->isPersistEveryEvent ? $aggregateRoot : null;
+            return $aggregateRoot;
         }
     }
 
