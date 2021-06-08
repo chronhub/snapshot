@@ -6,12 +6,15 @@ namespace Chronhub\Snapshot\Projection;
 
 use Chronhub\Snapshot\Snapshot;
 use Illuminate\Support\Collection;
+use Illuminate\Database\Query\Builder;
 use Chronhub\Snapshot\Store\SnapshotStore;
 use Chronhub\Foundation\Aggregate\AggregateChanged;
 use Chronhub\Foundation\Support\Contracts\Clock\Clock;
 use Chronhub\Foundation\Support\Contracts\Message\Header;
 use Chronhub\Projector\Support\Contracts\Support\ReadModel;
+use Chronhub\Chronicler\Support\Contracts\Query\QueryFilter;
 use Chronhub\Foundation\Support\Contracts\Aggregate\AggregateId;
+use Chronhub\Foundation\Support\Contracts\Aggregate\AggregateRoot;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRootWithSnapshotting;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRepositoryWithSnapshotting;
 
@@ -46,8 +49,10 @@ final class SnapshotReadModel implements ReadModel
             if (1 === $version || 0 === $version % $this->persisEveryEvents) {
                 $aggregateId = $this->determineAggregateId($event);
 
+                $from = $version === $this->persisEveryEvents ? 1 : $version - $this->persisEveryEvents;
+
                 /** @var AggregateRootWithSnapshotting $aggregateRoot */
-                $aggregateRoot = $this->aggregateRepository->retrieve($aggregateId);
+                $aggregateRoot = $this->retrieveAggregateFromVersion($aggregateId, $from, $version);
 
                 if ($aggregateRoot instanceof AggregateRootWithSnapshotting) {
                     $snapshot = new Snapshot(
@@ -103,5 +108,27 @@ final class SnapshotReadModel implements ReadModel
 
         /* @var AggregateId $aggregateIdType */
         return $aggregateIdType::fromString($aggregateId);
+    }
+
+    private function retrieveAggregateFromVersion(AggregateId $aggregateId, int $from, int $to): ?AggregateRoot
+    {
+        $filter = new class($aggregateId, $from, $to) implements QueryFilter {
+            public function __construct(private AggregateId $aggregateId, private $from, private int $to)
+            {
+            }
+
+            public function filterQuery(): callable
+            {
+                return function (Builder $query): void {
+                    $query
+                        ->whereRaw('headers->>\'__aggregate_id\' = ' . $this->aggregateId->toString())
+                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) >= ' . $this->from)
+                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) <= ' . $this->to)
+                        ->orderByRaw('CAST(headers->>\'__aggregate_version\' AS INT) ASC');
+                };
+            }
+        };
+
+        return $this->aggregateRepository->retrievePartially($aggregateId, $filter);
     }
 }
