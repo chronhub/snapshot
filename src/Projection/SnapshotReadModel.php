@@ -96,11 +96,10 @@ final class SnapshotReadModel implements ReadModel
                                                AggregateId $aggregateId,
                                                int $version): ?AggregateRootWithSnapshotting
     {
+        $aggregateType = $event->header(Header::AGGREGATE_TYPE);
+
         if (1 !== $version) {
-            $lastSnapshot = $this->snapshotStore->get(
-                $event->header(Header::AGGREGATE_TYPE),
-                $aggregateId->toString()
-            );
+            $lastSnapshot = $this->snapshotStore->get($aggregateType, $aggregateId->toString());
 
             if (null === $lastSnapshot) {
                 return null;
@@ -109,11 +108,7 @@ final class SnapshotReadModel implements ReadModel
             return $this->reconstitute->reconstituteFromSnapshot($lastSnapshot, $aggregateId, $version);
         }
 
-        return $this->reconstitute->reconstituteFromFirstVersion(
-                $aggregateId,
-                $event->header(Header::AGGREGATE_TYPE),
-                $event
-            );
+        return $this->reconstitute->reconstituteFromFirstVersion($aggregateId, $aggregateType, $event);
     }
 
     private function determineAggregateId(AggregateChanged $event): AggregateId
