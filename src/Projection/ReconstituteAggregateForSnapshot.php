@@ -53,10 +53,12 @@ final class ReconstituteAggregateForSnapshot
         }
     }
 
-    private function fromHistory(AggregateId $aggregateId, int $from, int $to): Generator
+    private function fromHistory(AggregateId $aggregateId, int $fromVersion, int $toVersion): Generator
     {
-        $filter = new class($aggregateId, $from, $to) implements QueryFilter {
-            public function __construct(private AggregateId $aggregateId, private int $from, private int $to)
+        $filter = new class($aggregateId, $fromVersion, $toVersion) implements QueryFilter {
+            public function __construct(private AggregateId $aggregateId,
+                                        private int $fromVersion,
+                                        private int $toVersion)
             {
             }
 
@@ -65,8 +67,8 @@ final class ReconstituteAggregateForSnapshot
                 return function (Builder $query): void {
                     $query
                         ->whereJsonContains('headers->__aggregate_id', $this->aggregateId->toString())
-                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) >= ' . $this->from)
-                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) <= ' . $this->to)
+                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) >= ' . $this->fromVersion)
+                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) <= ' . $this->toVersion)
                         ->orderByRaw('CAST(headers->>\'__aggregate_version\' AS INT) ASC');
                 };
             }
