@@ -44,12 +44,7 @@ final class SnapshotReadModel implements ReadModel
             $version = (int) $event->header(Header::AGGREGATE_VERSION);
 
             if (1 === $version || 0 === $version % $this->persisEveryEvents) {
-                $aggregateId = $this->determineAggregateId(
-                    $event->header(Header::AGGREGATE_ID),
-                    $event->header(Header::AGGREGATE_ID_TYPE),
-                );
-
-                $aggregateIdString = $aggregateId->toString();
+                $aggregateId = $this->determineAggregateId($event);
 
                 /** @var AggregateRootWithSnapshotting $aggregateRoot */
                 $aggregateRoot = $this->aggregateRepository->retrieve($aggregateId);
@@ -57,7 +52,7 @@ final class SnapshotReadModel implements ReadModel
                 if ($aggregateRoot instanceof AggregateRootWithSnapshotting) {
                     $snapshot = new Snapshot(
                         $event->header(Header::AGGREGATE_TYPE),
-                        $aggregateIdString,
+                        $aggregateId->toString(),
                         $aggregateRoot,
                         $aggregateRoot->version(),
                         $this->clock->fromNow()->dateTime(),
@@ -96,11 +91,15 @@ final class SnapshotReadModel implements ReadModel
     {
     }
 
-    private function determineAggregateId(string|AggregateId $aggregateId, ?string $aggregateIdType): AggregateId
+    private function determineAggregateId(AggregateChanged $event): AggregateId
     {
+        $aggregateId = $event->header(Header::AGGREGATE_ID);
+
         if ($aggregateId instanceof AggregateId) {
             return $aggregateId;
         }
+
+        $aggregateIdType = $event->header(Header::AGGREGATE_ID_TYPE);
 
         /* @var AggregateId $aggregateIdType */
         return $aggregateIdType::fromString($aggregateId);
