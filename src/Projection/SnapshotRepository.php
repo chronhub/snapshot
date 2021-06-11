@@ -26,19 +26,19 @@ class SnapshotRepository
     {
     }
 
-    public function store(DomainEvent $event): void
+    public function store(DomainEvent $event): bool
     {
         $version = (int) $event->header(Header::AGGREGATE_VERSION);
-
         $aggregateType = $event->header(Header::AGGREGATE_TYPE);
-
         $aggregateId = determineAggregateId($event);
 
-        $aggregateRoot = match (true) {
-            $version === $this->persisEveryEvents => $this->reconstituteFromFirstVersion($aggregateId, $aggregateType),
-            0 === $version % $this->persisEveryEvents => $this->reconstituteFromSnapshot($aggregateId, $aggregateType),
-            default => null,
-        };
+        $aggregateRoot = null;
+
+        if (1 === $version) {
+            $aggregateRoot = $this->reconstituteFirstVersion($aggregateId, $aggregateType);
+        } elseif (0 === $version % $this->persisEveryEvents) {
+            $aggregateRoot = $this->reconstituteFromSnapshot($aggregateId, $aggregateType, $version);
+        }
 
         if ($aggregateRoot instanceof AggregateRootWithSnapshotting) {
             $snapshot = new Snapshot(
@@ -51,8 +51,10 @@ class SnapshotRepository
 
             $this->snapshotStore->save($snapshot);
 
-            $this->aggregateRepository->aggregateCache()->forget($aggregateId);
+            return true;
         }
+
+        return false;
     }
 
     public function deleteAll(string $aggregateType): void
@@ -60,7 +62,7 @@ class SnapshotRepository
         $this->snapshotStore->deleteAll($aggregateType);
     }
 
-    protected function reconstituteFromSnapshot($aggregateId, $aggregateType): ?AggregateRootWithSnapshotting
+    protected function reconstituteFromSnapshot($aggregateId, $aggregateType, int $toVersion): ?AggregateRootWithSnapshotting
     {
         $lastSnapshot = $this->snapshotStore->get($aggregateType, $aggregateId->toString());
 
@@ -74,7 +76,7 @@ class SnapshotRepository
             $events = $this->fromHistory(
                 $aggregateRoot->aggregateId(),
                 $lastSnapshot->lastVersion() + 1,
-                $this->persisEveryEvents + 1
+                $toVersion + 1
             );
 
             return $aggregateRoot->reconstituteFromSnapshotEvents($events);
@@ -83,7 +85,7 @@ class SnapshotRepository
         }
     }
 
-    protected function reconstituteFromFirstVersion(AggregateId $aggregateId, string $aggregateType): ?AggregateRootWithSnapshotting
+    protected function reconstituteFirstVersion(AggregateId $aggregateId, string $aggregateType): ?AggregateRootWithSnapshotting
     {
         try {
             $events = $this->fromHistory($aggregateId, 1, $this->persisEveryEvents);
