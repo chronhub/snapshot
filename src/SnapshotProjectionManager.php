@@ -43,7 +43,7 @@ class SnapshotProjectionManager
 
         $snapshotConfig = $streamConfig['snapshot'] ?? [];
 
-        if (empty($snapshotConfig)) {
+        if (count($snapshotConfig) === 0) {
             throw new RuntimeException("Invalid snapshot configuration for stream $streamName");
         }
 

@@ -32,8 +32,7 @@ final class AggregateSnapshotRepository implements AggregateRepositoryWithSnapsh
                                 protected StreamProducer $streamProducer,
                                 protected AggregateCache $aggregateCache,
                                 protected AggregateEventReleaser $eventsReleaser,
-                                protected SnapshotStore $snapshotStore,
-                                protected bool $isPersistEveryEvent = false)
+                                protected SnapshotStore $snapshotStore)
     {
     }
 
