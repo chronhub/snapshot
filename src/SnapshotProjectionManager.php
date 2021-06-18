@@ -18,6 +18,7 @@ use Chronhub\Projector\Support\Contracts\ProjectorFactory;
 use Chronhub\Projector\Support\Contracts\Support\ReadModel;
 use Chronhub\Chronicler\Support\Contracts\Factory\RepositoryManager;
 use Chronhub\Chronicler\Support\Contracts\Aggregate\AggregateRepositoryWithSnapshotting;
+use function count;
 use function is_string;
 
 class SnapshotProjectionManager
@@ -43,7 +44,7 @@ class SnapshotProjectionManager
 
         $snapshotConfig = $streamConfig['snapshot'] ?? [];
 
-        if (count($snapshotConfig) === 0) {
+        if (0 === count($snapshotConfig)) {
             throw new RuntimeException("Invalid snapshot configuration for stream $streamName");
         }
 

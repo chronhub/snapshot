@@ -158,10 +158,9 @@ class SnapshotRepository
             {
                 return function (Builder $query): void {
                     $query
-                        ->whereJsonContains('headers->__aggregate_id', $this->aggregateId->toString())
-                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) >= ' . $this->fromVersion)
-                        ->whereRaw('CAST(headers->>\'__aggregate_version\' AS INT) <= ' . $this->toVersion)
-                        ->orderBy('no');
+                        ->where('aggregate_id', $this->aggregateId->toString())
+                        ->whereBetween('aggregate_version', [$this->fromVersion, $this->toVersion])
+                        ->orderBy('aggregate_version');
                 };
             }
         };
